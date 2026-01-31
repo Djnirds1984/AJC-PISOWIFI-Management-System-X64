@@ -23,7 +23,14 @@ const PPPoEServer: React.FC = () => {
   const [pppoeBillingProfiles, setPppoeBillingProfiles] = useState<PPPoEBillingProfile[]>([]);
   const [pppoeLogs, setPppoeLogs] = useState<string[]>([]);
   
-  const [newPppoeUser, setNewPppoeUser] = useState({ username: '', password: '', billing_profile_id: '' });
+  const [newPppoeUser, setNewPppoeUser] = useState({ 
+    username: '', 
+    password: '', 
+    billing_profile_id: '',
+    expiration_date: '',
+    expiration_action: 'disable',
+    redirect_url: ''
+  });
   const [newProfile, setNewProfile] = useState<PPPoEProfile>({ name: '', rate_limit_dl: 5, rate_limit_ul: 5 });
   const [newBillingProfile, setNewBillingProfile] = useState<Partial<PPPoEBillingProfile>>({ profile_id: 0, name: '', price: 0 });
 
@@ -130,9 +137,19 @@ const PPPoEServer: React.FC = () => {
       await apiClient.addPPPoEUser(
         newPppoeUser.username, 
         newPppoeUser.password, 
-        newPppoeUser.billing_profile_id ? parseInt(newPppoeUser.billing_profile_id) : undefined
+        newPppoeUser.billing_profile_id ? parseInt(newPppoeUser.billing_profile_id) : undefined,
+        newPppoeUser.expiration_date || undefined,
+        newPppoeUser.expiration_action,
+        newPppoeUser.redirect_url || undefined
       );
-      setNewPppoeUser({ username: '', password: '', billing_profile_id: '' });
+      setNewPppoeUser({ 
+        username: '', 
+        password: '', 
+        billing_profile_id: '',
+        expiration_date: '',
+        expiration_action: 'disable',
+        redirect_url: ''
+      });
       await loadData();
       alert(`User ${newPppoeUser.username} added!`);
     } catch (e: any) {
@@ -504,6 +521,46 @@ const PPPoEServer: React.FC = () => {
                   <option value="">Select Billing Profile (Optional)...</option>
                   {pppoeBillingProfiles.map(bp => <option key={bp.id} value={bp.id}>{bp.name} (₱{bp.price})</option>)}
                 </select>
+
+                <div className="pt-2 border-t border-slate-100 mt-2">
+                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Expiration (Optional)</label>
+                  <input 
+                    type="datetime-local" 
+                    value={newPppoeUser.expiration_date} 
+                    onChange={e => setNewPppoeUser({...newPppoeUser, expiration_date: e.target.value})}
+                    className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-[10px] font-mono outline-none focus:bg-white mb-2" 
+                  />
+                  
+                  {newPppoeUser.expiration_date && (
+                    <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
+                      <div>
+                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Action when Expired</label>
+                        <select 
+                          value={newPppoeUser.expiration_action}
+                          onChange={e => setNewPppoeUser({...newPppoeUser, expiration_action: e.target.value})}
+                          className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-[10px] font-bold outline-none focus:bg-white"
+                        >
+                          <option value="disable">1. Disable Account</option>
+                          <option value="redirect">2. Redirect to URL</option>
+                        </select>
+                      </div>
+                      
+                      {newPppoeUser.expiration_action === 'redirect' && (
+                        <div>
+                          <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Redirect URL</label>
+                          <input 
+                            type="text" 
+                            value={newPppoeUser.redirect_url} 
+                            onChange={e => setNewPppoeUser({...newPppoeUser, redirect_url: e.target.value})}
+                            className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-[10px] font-mono outline-none focus:bg-white" 
+                            placeholder="http://example.com/expired"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 <button 
                   onClick={addPPPoEUserHandler} 
                   disabled={loading}

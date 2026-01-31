@@ -155,6 +155,11 @@ function cleanupExpiredCoinSlotLocks() {
 
 setInterval(cleanupExpiredCoinSlotLocks, 30_000).unref?.();
 
+// Check PPPoE Expirations every minute
+setInterval(() => {
+  network.checkPPPoEExpirations().catch(err => console.error('[System] PPPoE Expiration Check Error:', err));
+}, 60 * 1000).unref?.();
+
 // Configure Multer for Audio Uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -2994,13 +2999,20 @@ app.get('/api/network/pppoe/users', requireAdmin, async (req, res) => {
 
 app.post('/api/network/pppoe/users', requireAdmin, async (req, res) => {
   try {
-    const { username, password, billing_profile_id } = req.body;
+    const { username, password, billing_profile_id, expiration_date, expiration_action, redirect_url } = req.body;
     
     if (!username || !password) {
       return res.status(400).json({ error: 'Username and password required' });
     }
     
-    const result = await network.addPPPoEUser(username, password, billing_profile_id);
+    const result = await network.addPPPoEUser(
+      username, 
+      password, 
+      billing_profile_id,
+      expiration_date,
+      expiration_action,
+      redirect_url
+    );
     res.json(result);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
