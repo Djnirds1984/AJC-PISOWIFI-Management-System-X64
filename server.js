@@ -43,6 +43,27 @@ const io = new Server(server);
 
 // DEBUG LOGGING MIDDLEWARE
 app.use(express.json()); // Ensure JSON body parsing is early
+
+// PPPoE Redirect Middleware
+app.use((req, res, next) => {
+  try {
+    const clientIp = req.ip.replace('::ffff:', '');
+    const redirectUrl = network.getPPPoERedirect && network.getPPPoERedirect(clientIp);
+    
+    if (redirectUrl) {
+      // Allow access to local API/static assets to prevent breaking the page if it's local
+      if (req.url.startsWith('/api') || req.url.startsWith('/dist') || req.url.startsWith('/assets')) {
+        return next();
+      }
+
+      console.log(`[PPPoE] Redirecting ${clientIp} to ${redirectUrl}`);
+      return res.redirect(redirectUrl);
+    }
+  } catch (e) {
+    console.error('[PPPoE] Redirect Middleware Error:', e);
+  }
+  next();
+});
 app.post('/api/debug/log', (req, res) => {
   const { message, level = 'INFO', component = 'Frontend' } = req.body;
   const timestamp = new Date().toISOString().split('T')[1].slice(0, -1);
