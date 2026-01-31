@@ -1921,16 +1921,9 @@ app.get('/api/system/stats', requireAdmin, async (req, res) => {
 
 app.get('/api/system/interfaces', requireAdmin, async (req, res) => {
   try {
-    const interfaces = await si.networkInterfaces();
-    // Return just the interface names to keep it light
-    const interfaceNames = interfaces.map(iface => iface.iface);
-    // Also include any interfaces from networkStats that might be missing (unlikely but safe)
-    const netStats = await si.networkStats();
-    const activeInterfaces = netStats.map(n => n.iface);
-    
-    const allInterfaces = [...new Set([...interfaceNames, ...activeInterfaces])];
-    
-    res.json(allInterfaces);
+    const interfaces = await network.getInterfaces();
+    const { wanName } = network.classifyInterfaces(interfaces);
+    res.json({ interfaces, wan: wanName });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -3737,28 +3730,39 @@ async function applyMultiWanConfig(config) {
              return;
         }
 
-        // 2. Initialize Chain
+        // 2. Configure Interfaces
+        const runtimeIfaces = [];
+        let ifaceIdx = 0;
+        for (const iface of config.interfaces) {
+            try {
+                const actualDev = await network.configureInterface(iface, ifaceIdx);
+                runtimeIfaces.push({ ...iface, interface: actualDev });
+            } catch (e) {
+                console.error(`[MultiWAN] Failed to configure ${iface.interface}:`, e.message);
+                runtimeIfaces.push(iface);
+            }
+            ifaceIdx++;
+        }
+
+        // 3. Initialize Chain
         await run('iptables -t mangle -N AJC_MULTIWAN');
         await run('iptables -t mangle -I PREROUTING -j AJC_MULTIWAN');
 
-        const ifaces = config.interfaces;
+        const ifaces = runtimeIfaces;
         
         if (config.mode === 'pcc') {
             // Restore Connmark
             await run('iptables -t mangle -A AJC_MULTIWAN -j CONNMARK --restore-mark');
             await run('iptables -t mangle -A AJC_MULTIWAN -m mark ! --mark 0 -j RETURN');
             
-            ifaces.forEach(async (iface, idx) => {
+            let idx = 0;
+            for (const iface of ifaces) {
                  const mark = idx + 1;
                  const every = ifaces.length;
-                 const packet = idx;
                  
                  // Apply Mark using Nth statistic (Simulating Load Balancing)
-                 // This covers "Both Addresses" intent by balancing connections
                  const currentEvery = every - idx;
                  
-                 // Note: In a real environment, we would use HMARK for true src/dst hashing if available
-                 // For now, we use statistic nth which is robust and available
                  await run(`iptables -t mangle -A AJC_MULTIWAN -m statistic --mode nth --every ${currentEvery} --packet 0 -j MARK --set-mark ${mark}`);
                  await run(`iptables -t mangle -A AJC_MULTIWAN -m mark --mark ${mark} -j CONNMARK --save-mark`);
                  
@@ -3769,16 +3773,23 @@ async function applyMultiWanConfig(config) {
                     try { await execPromise(`ip rule del fwmark ${mark} table ${tableId}`); } catch(e) { break; }
                  }
                  await run(`ip rule add fwmark ${mark} table ${tableId}`);
-                 await run(`ip route add default via ${iface.gateway} dev ${iface.interface} table ${tableId}`);
-            });
+                 
+                 const viaPart = iface.gateway ? `via ${iface.gateway}` : '';
+                 await run(`ip route add default ${viaPart} dev ${iface.interface} table ${tableId}`);
+                 
+                 idx++;
+            }
             
         } else {
             // ECMP Logic
             let routeCmd = 'ip route replace default scope global';
-            ifaces.forEach(iface => {
-                routeCmd += ` nexthop via ${iface.gateway} dev ${iface.interface} weight ${iface.weight}`;
-            });
-            await run(routeCmd);
+            let valid = false;
+            for (const iface of ifaces) {
+                const viaPart = iface.gateway ? `via ${iface.gateway}` : '';
+                routeCmd += ` nexthop ${viaPart} dev ${iface.interface} weight ${iface.weight}`;
+                valid = true;
+            }
+            if (valid) await run(routeCmd);
         }
         
         await run('ip route flush cache');
