@@ -566,6 +566,15 @@ export const apiClient = {
     await handleResponse(res);
   },
 
+  async updatePPPoEProfile(id: number, profile: Partial<PPPoEProfile>): Promise<void> {
+    const res = await fetch(`${API_BASE}/network/pppoe/profiles/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(profile)
+    });
+    await handleResponse(res);
+  },
+
   async deletePPPoEProfile(id: number): Promise<void> {
     const res = await fetch(`${API_BASE}/network/pppoe/profiles/${id}`, {
       method: 'DELETE',
@@ -583,6 +592,15 @@ export const apiClient = {
   async addPPPoEBillingProfile(profile: Partial<PPPoEBillingProfile>): Promise<void> {
     const res = await fetch(`${API_BASE}/network/pppoe/billing-profiles`, {
       method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(profile)
+    });
+    await handleResponse(res);
+  },
+
+  async updatePPPoEBillingProfile(id: number, profile: Partial<PPPoEBillingProfile>): Promise<void> {
+    const res = await fetch(`${API_BASE}/network/pppoe/billing-profiles/${id}`, {
+      method: 'PUT',
       headers: getHeaders(),
       body: JSON.stringify(profile)
     });

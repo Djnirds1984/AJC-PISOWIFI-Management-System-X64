@@ -3061,6 +3061,14 @@ app.post('/api/network/pppoe/profiles', requireAdmin, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+app.put('/api/network/pppoe/profiles/:id', requireAdmin, async (req, res) => {
+  const { name, rate_limit_dl, rate_limit_ul } = req.body;
+  try {
+    await db.run('UPDATE pppoe_profiles SET name = ?, rate_limit_dl = ?, rate_limit_ul = ? WHERE id = ?', [name, rate_limit_dl, rate_limit_ul, req.params.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.delete('/api/network/pppoe/profiles/:id', requireAdmin, async (req, res) => {
   try {
     await db.run('DELETE FROM pppoe_profiles WHERE id = ?', [req.params.id]);
@@ -3085,6 +3093,14 @@ app.post('/api/network/pppoe/billing-profiles', requireAdmin, async (req, res) =
   const { profile_id, name, price } = req.body;
   try {
     await db.run('INSERT INTO pppoe_billing_profiles (profile_id, name, price) VALUES (?, ?, ?)', [profile_id, name, price]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.put('/api/network/pppoe/billing-profiles/:id', requireAdmin, async (req, res) => {
+  const { profile_id, name, price } = req.body;
+  try {
+    await db.run('UPDATE pppoe_billing_profiles SET profile_id = ?, name = ?, price = ? WHERE id = ?', [profile_id, name, price, req.params.id]);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -4103,6 +4119,14 @@ server.listen(80, '0.0.0.0', async () => {
   }, 30000);
   
   // Always call bootupRestore but pass revocation status if needed
+  // We can fetch it inside bootupRestore or pass it
+  const verificationStatus = await licenseManager.verifyLicense();
+  const trialStatusInfo = await checkTrialStatus(systemHardwareId, verificationStatus);
+  const isLicensedNow = verificationStatus.isValid && verificationStatus.isActivated;
+  const isRevokedNow = verificationStatus.isRevoked || trialStatusInfo.isRevoked;
+  const canOperateNow = (isLicensedNow || trialStatusInfo.isTrialActive) && !isRevokedNow;
+  await bootupRestore(!canOperateNow);
+});
   // We can fetch it inside bootupRestore or pass it
   const verificationStatus = await licenseManager.verifyLicense();
   const trialStatusInfo = await checkTrialStatus(systemHardwareId, verificationStatus);
