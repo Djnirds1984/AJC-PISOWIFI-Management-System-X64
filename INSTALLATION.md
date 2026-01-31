@@ -7,7 +7,7 @@
 Run this command in your terminal to install all dependencies and the AJC PISOWIFI system:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/Djnirds1984/AJC-PISOWIFI-Management-System/main/install.sh | sudo bash
+curl -sSL https://raw.githubusercontent.com/Djnirds1984/AJC-PISOWIFI-Management-System-X64/main/install.sh | sudo bash
 ```
 
 ### Manual Installation
