@@ -4127,11 +4127,3 @@ server.listen(80, '0.0.0.0', async () => {
   const canOperateNow = (isLicensedNow || trialStatusInfo.isTrialActive) && !isRevokedNow;
   await bootupRestore(!canOperateNow);
 });
-  // We can fetch it inside bootupRestore or pass it
-  const verificationStatus = await licenseManager.verifyLicense();
-  const trialStatusInfo = await checkTrialStatus(systemHardwareId, verificationStatus);
-  const isLicensedNow = verificationStatus.isValid && verificationStatus.isActivated;
-  const isRevokedNow = verificationStatus.isRevoked || trialStatusInfo.isRevoked;
-  const canOperateNow = (isLicensedNow || trialStatusInfo.isTrialActive) && !isRevokedNow;
-  await bootupRestore(!canOperateNow);
-});
