@@ -428,6 +428,40 @@ const MultiWanSettings: React.FC = () => {
             </div>
             
             {config.enabled && (
+                <>
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                    <h3 className="font-black text-slate-800 uppercase tracking-widest text-xs mb-4">Load Balancing Mode</h3>
+                    <div className="space-y-2">
+                        <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${config.mode === 'pcc' ? 'bg-blue-50 border-blue-300' : 'bg-slate-50 border-slate-200 hover:border-blue-300'}`}>
+                            <input 
+                                type="radio" 
+                                name="mode" 
+                                checked={config.mode === 'pcc'} 
+                                onChange={() => setConfig({...config, mode: 'pcc'})}
+                                className="text-blue-600 focus:ring-blue-500"
+                            />
+                            <div>
+                                <div className="font-bold text-xs text-slate-700 uppercase">PCC (Failover & Load Balance)</div>
+                                <div className="text-[10px] text-slate-500 font-medium mt-0.5">Packet marking & routing rules</div>
+                            </div>
+                        </label>
+                        <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${config.mode === 'ecmp' ? 'bg-blue-50 border-blue-300' : 'bg-slate-50 border-slate-200 hover:border-blue-300'}`}>
+                            <input 
+                                type="radio" 
+                                name="mode" 
+                                checked={config.mode === 'ecmp'} 
+                                onChange={() => setConfig({...config, mode: 'ecmp'})}
+                                className="text-blue-600 focus:ring-blue-500"
+                            />
+                            <div>
+                                <div className="font-bold text-xs text-slate-700 uppercase">ECMP (Round Robin)</div>
+                                <div className="text-[10px] text-slate-500 font-medium mt-0.5">Kernel-based multipath routing</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                {config.mode === 'pcc' && (
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
                     <h3 className="font-black text-slate-800 uppercase tracking-widest text-xs mb-4">PCC Method</h3>
                     <div className="space-y-2">
@@ -457,6 +491,8 @@ const MultiWanSettings: React.FC = () => {
                         </label>
                         </div>
                 </div>
+                )}
+                </>
             )}
         </div>
       </div>
