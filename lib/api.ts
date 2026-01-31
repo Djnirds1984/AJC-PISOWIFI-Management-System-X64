@@ -786,5 +786,20 @@ export const apiClient = {
       headers: getHeaders() 
     });
     return handleResponse(res);
+  },
+
+  // Anti-VPN API
+  async getAntiVPN(): Promise<{ enabled: boolean }> {
+    const res = await fetch(`${API_BASE}/network/anti-vpn`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
+  async toggleAntiVPN(enabled: boolean): Promise<void> {
+    const res = await fetch(`${API_BASE}/network/anti-vpn`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ enabled })
+    });
+    await handleResponse(res);
   }
 };

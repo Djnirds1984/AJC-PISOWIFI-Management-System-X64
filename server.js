@@ -2849,6 +2849,22 @@ app.delete('/api/network/bridge/:name', requireAdmin, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// Anti-VPN API
+app.get('/api/network/anti-vpn', requireAdmin, async (req, res) => {
+  try {
+    const row = await db.get("SELECT value FROM config WHERE key = 'anti_vpn_enabled'");
+    res.json({ enabled: row ? row.value === '1' : false });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/network/anti-vpn', requireAdmin, async (req, res) => {
+  try {
+    const { enabled } = req.body;
+    await network.toggleAntiVPN(enabled);
+    res.json({ success: true, enabled });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // NODEMCU FLASHER API
 app.get('/api/system/usb-devices', requireAdmin, async (req, res) => {
   try {

@@ -34,28 +34,42 @@ const NetworkSettings: React.FC = () => {
   const [bridge, setBridge] = useState({ name: 'br0', members: [] as string[], stp: false });
   const [bridges, setBridges] = useState<any[]>([]);
 
-
+  // Anti-VPN State
+  const [antiVpnEnabled, setAntiVpnEnabled] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [ifaces, hs, wifi, v, b] = await Promise.all([
+      const [ifaces, hs, wifi, v, b, av] = await Promise.all([
         apiClient.getInterfaces(),
         apiClient.getHotspots().catch(() => []),
         apiClient.getWirelessConfigs().catch(() => []),
         apiClient.getVlans().catch(() => []),
-        apiClient.getBridges().catch(() => [])
+        apiClient.getBridges().catch(() => []),
+        apiClient.getAntiVPN().catch(() => ({ enabled: false }))
       ]);
       setInterfaces(ifaces.filter(i => !i.isLoopback));
       setHotspots(Array.isArray(hs) ? hs : []);
       setWirelessArr(Array.isArray(wifi) ? wifi : []);
       setVlans(Array.isArray(v) ? v : []);
       setBridges(Array.isArray(b) ? b : []);
+      setAntiVpnEnabled(av.enabled);
     } catch (err) { 
       console.error('[UI] Data Load Error:', err); 
     }
+    finally { setLoading(false); }
+  };
+
+  const toggleAntiVPN = async () => {
+    try {
+      setLoading(true);
+      const newState = !antiVpnEnabled;
+      await apiClient.toggleAntiVPN(newState);
+      setAntiVpnEnabled(newState);
+      alert(`Anti-VPN Hack ${newState ? 'Enabled' : 'Disabled'}!`);
+    } catch (e) { alert('Failed to toggle Anti-VPN.'); }
     finally { setLoading(false); }
   };
 
@@ -339,6 +353,26 @@ const NetworkSettings: React.FC = () => {
           </div>
         </section>
       </div>
+
+      {/* 5. Security Shield */}
+      <section className="bg-red-50 rounded-xl border border-red-100 p-4 shadow-sm">
+        <h3 className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-4">Security Shield</h3>
+        <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-red-100">
+           <div>
+             <h4 className="font-black text-slate-900 text-xs uppercase">Anti-VPN Hack</h4>
+             <p className="text-[9px] text-slate-500 mt-1 max-w-md">
+               Blocks common VPN protocols (PPTP, L2TP, OpenVPN, WireGuard) and DNS-over-TLS to prevent users from bypassing network restrictions.
+             </p>
+           </div>
+           <button 
+             onClick={toggleAntiVPN}
+             disabled={loading}
+             className={`px-4 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest transition-all ${antiVpnEnabled ? 'bg-red-600 text-white shadow-lg shadow-red-500/20' : 'bg-slate-200 text-slate-500'}`}
+           >
+             {antiVpnEnabled ? 'Enabled' : 'Disabled'}
+           </button>
+        </div>
+      </section>
     </div>
   );
 };
