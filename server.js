@@ -3744,11 +3744,18 @@ async function applyMultiWanConfig(config) {
             ifaceIdx++;
         }
 
-        // 3. Initialize Chain
+        // 3. Initialize Chain & Source NAT
         await run('iptables -t mangle -N AJC_MULTIWAN');
         await run('iptables -t mangle -I PREROUTING -j AJC_MULTIWAN');
 
         const ifaces = runtimeIfaces;
+        
+        // 3.1 Setup Masquerade for all WANs (Critical for Multi-WAN)
+        // Clean up previous MASQUERADE rules related to MultiWAN if needed, 
+        // but for now we append. Ideally we should tag them, but simple MASQ on outgoing interface is safe.
+        for (const iface of ifaces) {
+             await run(`iptables -t nat -A POSTROUTING -o ${iface.interface} -j MASQUERADE`);
+        }
         
         if (config.mode === 'pcc') {
             // Restore Connmark

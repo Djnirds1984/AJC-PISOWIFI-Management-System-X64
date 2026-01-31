@@ -9,6 +9,7 @@ interface WanInterface {
   username?: string;
   password?: string;
   weight: number;
+  mac?: string; // MAC Address Clone
 }
 
 interface MultiWanConfig {
@@ -367,6 +368,28 @@ const MultiWanSettings: React.FC = () => {
                                         value={newInterface.weight}
                                         onChange={e => setNewInterface({...newInterface, weight: parseInt(e.target.value) || 1})}
                                     />
+                                </div>
+
+                                <div className="md:col-span-2 pt-2 border-t border-slate-100 mt-2">
+                                    <details className="group">
+                                        <summary className="cursor-pointer text-[10px] font-black text-blue-500 uppercase tracking-widest flex items-center gap-1 hover:text-blue-600">
+                                            <span>Advanced Settings</span>
+                                            <svg className="w-3 h-3 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                        </summary>
+                                        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-1">
+                                            <div>
+                                                <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">MAC Address Clone (Optional)</label>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="XX:XX:XX:XX:XX:XX" 
+                                                    className="w-full p-2.5 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                                                    value={newInterface.mac || ''}
+                                                    onChange={e => setNewInterface({...newInterface, mac: e.target.value})}
+                                                />
+                                                <p className="text-[9px] text-slate-400 mt-1">Leave empty to use default hardware MAC.</p>
+                                            </div>
+                                        </div>
+                                    </details>
                                 </div>
                             </div>
 
