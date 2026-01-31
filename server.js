@@ -4127,3 +4127,19 @@ server.listen(80, '0.0.0.0', async () => {
   const canOperateNow = (isLicensedNow || trialStatusInfo.isTrialActive) && !isRevokedNow;
   await bootupRestore(!canOperateNow);
 });
+
+// --- PPPoE Non-Payment Redirect Portal ---
+// Create a separate Express app for the redirect portal
+const pppoeApp = express();
+
+// Handle all requests by serving the payment notice
+pppoeApp.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'pppoe_payment.html'));
+});
+
+// Listen on port 8081
+const PPPOE_PORTAL_PORT = 8081;
+pppoeApp.listen(PPPOE_PORTAL_PORT, '0.0.0.0', () => {
+  console.log(`[PPPoE] Non-Payment Redirect Portal running on port ${PPPOE_PORTAL_PORT}`);
+});
+
