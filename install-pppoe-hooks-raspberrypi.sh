@@ -24,6 +24,26 @@ IFNAME="$1"
 LOCAL_IP="$4"
 REMOTE_IP="$5"
 
+# Debug logging to understand the parameters
+echo "[$(date)] PPPoE Hook Debug: IFNAME=$IFNAME, LOCAL_IP=$LOCAL_IP, REMOTE_IP=$REMOTE_IP, PEERNAME=$PEERNAME" >> /var/log/ajc-pppoe.log
+
+# Get the actual PPP peer IP from the interface (this is the real client IP)
+PPP_PEER_IP=$(ip route show dev "$IFNAME" 2>/dev/null | grep -oP 'peer \K[\d.]+' | head -1)
+
+# Also try to get it from ifconfig as backup
+if [ -z "$PPP_PEER_IP" ]; then
+    PPP_PEER_IP=$(ifconfig "$IFNAME" 2>/dev/null | grep -oP 'P-t-P:\K[\d.]+' | head -1)
+fi
+
+# Debug logging
+echo "[$(date)] PPPoE Hook Debug: PPP peer IP from interface: $PPP_PEER_IP" >> /var/log/ajc-pppoe.log
+
+# Use the correct IP - prefer the PPP peer IP over the $5 parameter
+if [ -n "$PPP_PEER_IP" ] && [ "$PPP_PEER_IP" != "$REMOTE_IP" ]; then
+    echo "[$(date)] PPPoE Hook Info: Correcting IP from $REMOTE_IP to actual PPP peer IP: $PPP_PEER_IP" >> /var/log/ajc-pppoe.log
+    REMOTE_IP="$PPP_PEER_IP"
+fi
+
 # Log the connection
 echo "[$(date)] PPPoE Connect: $USERNAME on $IFNAME (Client IP: $REMOTE_IP)" >> /var/log/ajc-pppoe.log
 
@@ -61,6 +81,26 @@ cat > /etc/ppp/ip-down.local << 'EOF'
 USERNAME="$PEERNAME"
 IFNAME="$1"
 REMOTE_IP="$5"
+
+# Debug logging to understand the parameters
+echo "[$(date)] PPPoE Hook Down Debug: IFNAME=$IFNAME, REMOTE_IP=$REMOTE_IP, PEERNAME=$PEERNAME" >> /var/log/ajc-pppoe.log
+
+# For PPPoE connections, we need to check the peer IP
+# The correct client IP should be the remote endpoint
+PPP_PEER_IP=$(ip route show dev "$IFNAME" 2>/dev/null | grep -oP 'peer \K[\d.]+' | head -1)
+
+# Also try to get it from ifconfig as backup
+if [ -z "$PPP_PEER_IP" ]; then
+    PPP_PEER_IP=$(ifconfig "$IFNAME" 2>/dev/null | grep -oP 'P-t-P:\K[\d.]+' | head -1)
+fi
+
+echo "[$(date)] PPPoE Hook Down Debug: PPP peer IP: $PPP_PEER_IP" >> /var/log/ajc-pppoe.log
+
+# Use the PPP peer IP if available, otherwise fall back to REMOTE_IP
+if [ -n "$PPP_PEER_IP" ]; then
+    echo "[$(date)] PPPoE Hook Down Info: Using PPP peer IP: $PPP_PEER_IP instead of REMOTE_IP: $REMOTE_IP" >> /var/log/ajc-pppoe.log
+    REMOTE_IP="$PPP_PEER_IP"
+fi
 
 # Log the disconnection
 echo "[$(date)] PPPoE Disconnect: $USERNAME on $IFNAME (Client IP: $REMOTE_IP)" >> /var/log/ajc-pppoe.log
