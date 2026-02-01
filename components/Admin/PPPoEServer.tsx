@@ -10,8 +10,6 @@ const PPPoEServer: React.FC = () => {
   const [pppoeServer, setPppoeServer] = useState<Partial<PPPoEServerConfig>>({
     interface: '',
     local_ip: '192.168.100.1',
-    ip_pool_start: '192.168.100.10',
-    ip_pool_end: '192.168.100.254',
     dns1: '8.8.8.8',
     dns2: '8.8.4.4',
     service_name: ''
@@ -32,7 +30,7 @@ const PPPoEServer: React.FC = () => {
     expiration_profile_id: '',
     redirect_url: ''
   });
-  const [newProfile, setNewProfile] = useState<PPPoEProfile>({ name: '', rate_limit_dl: 5, rate_limit_ul: 5 });
+  const [newProfile, setNewProfile] = useState<PPPoEProfile>({ name: '', rate_limit_dl: 5, rate_limit_ul: 5, ip_pool_start: '', ip_pool_end: '' });
   const [newBillingProfile, setNewBillingProfile] = useState<Partial<PPPoEBillingProfile>>({ profile_id: 0, name: '', price: 0 });
 
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
@@ -88,7 +86,7 @@ const PPPoEServer: React.FC = () => {
 
   // PPPoE Server Functions
   const startPPPoEServerHandler = async () => {
-    if (!pppoeServer.interface || !pppoeServer.local_ip || !pppoeServer.ip_pool_start || !pppoeServer.ip_pool_end) {
+    if (!pppoeServer.interface || !pppoeServer.local_ip) {
       return alert('Please fill all required fields!');
     }
     
@@ -236,7 +234,7 @@ const PPPoEServer: React.FC = () => {
   };
 
   const cancelEditProfile = () => {
-    setNewProfile({ name: '', rate_limit_dl: 5, rate_limit_ul: 5 });
+    setNewProfile({ name: '', rate_limit_dl: 5, rate_limit_ul: 5, ip_pool_start: '', ip_pool_end: '' });
     setEditingProfileId(null);
   };
 
@@ -372,30 +370,7 @@ const PPPoEServer: React.FC = () => {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1 block">Pool Start</label>
-                      <input 
-                        type="text" 
-                        value={pppoeServer.ip_pool_start} 
-                        onChange={e => setPppoeServer({...pppoeServer, ip_pool_start: e.target.value})}
-                        disabled={pppoeStatus?.running}
-                        className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-sm font-mono disabled:opacity-50 outline-none" 
-                        placeholder="192.168.100.10"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1 block">Pool End</label>
-                      <input 
-                        type="text" 
-                        value={pppoeServer.ip_pool_end} 
-                        onChange={e => setPppoeServer({...pppoeServer, ip_pool_end: e.target.value})}
-                        disabled={pppoeStatus?.running}
-                        className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-sm font-mono disabled:opacity-50 outline-none" 
-                        placeholder="192.168.100.254"
-                      />
-                    </div>
-                  </div>
+
                 </div>
 
                 <div className="space-y-3">
@@ -487,6 +462,22 @@ const PPPoEServer: React.FC = () => {
                       />
                     </div>
                   </div>
+                  <div className="grid grid-cols-2 gap-2 mb-2">
+                    <input 
+                      type="text" 
+                      placeholder="IP Pool Start"
+                      value={newProfile.ip_pool_start}
+                      onChange={e => setNewProfile({...newProfile, ip_pool_start: e.target.value})}
+                      className="w-full bg-white border border-slate-200 rounded px-2 py-1 text-sm font-mono outline-none"
+                    />
+                    <input 
+                      type="text" 
+                      placeholder="IP Pool End"
+                      value={newProfile.ip_pool_end}
+                      onChange={e => setNewProfile({...newProfile, ip_pool_end: e.target.value})}
+                      className="w-full bg-white border border-slate-200 rounded px-2 py-1 text-sm font-mono outline-none"
+                    />
+                  </div>
                   <div className="flex gap-2">
                     <button 
                       onClick={addProfileHandler}
@@ -510,6 +501,9 @@ const PPPoEServer: React.FC = () => {
                       <div>
                         <p className="text-sm font-bold text-slate-900">{p.name}</p>
                         <p className="text-sm text-slate-400 font-bold uppercase">{p.rate_limit_dl}M/{p.rate_limit_ul}M Limit</p>
+                        {p.ip_pool_start && p.ip_pool_end && (
+                          <p className="text-xs text-slate-500 font-mono">{p.ip_pool_start} - {p.ip_pool_end}</p>
+                        )}
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
                         <button onClick={() => editProfile(p)} className="text-blue-500 hover:text-blue-700 p-1">
