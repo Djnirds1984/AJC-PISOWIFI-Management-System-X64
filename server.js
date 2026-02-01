@@ -3024,6 +3024,45 @@ app.get('/api/network/pppoe/sessions', requireAdmin, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// Real-time PPPoE expiration check endpoint for ip-up hook
+app.get('/api/pppoe/check-expiration', async (req, res) => {
+  const { username, ip } = req.query;
+  
+  try {
+    if (!username) {
+      return res.json({ action: 'allow' });
+    }
+    
+    const user = await db.get('SELECT * FROM pppoe_users WHERE username = ?', [username]);
+    
+    if (!user) {
+      console.log(`[PPPoE-Hook] User ${username} not found in database`);
+      return res.json({ action: 'allow' });
+    }
+    
+    const now = new Date();
+    const expDate = new Date(user.expiration_date);
+    
+    if (expDate < now) {
+      console.log(`[PPPoE-Hook] User ${username} EXPIRED - Applying restrictions`);
+      
+      // Apply iptables rules immediately
+      if (ip && ip !== 'N/A') {
+        await execPromise(`iptables -t nat -I PREROUTING -s ${ip} -p tcp --dport 80 -j REDIRECT --to-port 8081`).catch(() => {});
+        await execPromise(`iptables -I FORWARD -s ${ip} -j DROP`).catch(() => {});
+      }
+      
+      res.json({ action: 'restrict' });
+    } else {
+      console.log(`[PPPoE-Hook] User ${username} ACTIVE - Allowing access`);
+      res.json({ action: 'allow' });
+    }
+  } catch (error) {
+    console.error('[PPPoE-Hook] Error:', error);
+    res.json({ action: 'allow' }); // Fail open
+  }
+});
+
 app.get('/api/network/pppoe/users', requireAdmin, async (req, res) => {
   try {
     const users = await network.getPPPoEUsers();
