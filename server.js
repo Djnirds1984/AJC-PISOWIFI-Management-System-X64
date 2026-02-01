@@ -181,9 +181,10 @@ function cleanupExpiredCoinSlotLocks() {
 setInterval(cleanupExpiredCoinSlotLocks, 30_000).unref?.();
 
 // Check PPPoE Expirations every minute
+// Periodic PPPoE expiration check (every 10 seconds for more responsive disconnects)
 setInterval(() => {
   network.checkPPPoEExpirations().catch(err => console.error('[System] PPPoE Expiration Check Error:', err));
-}, 60 * 1000).unref?.();
+}, 10 * 1000).unref?.();
 
 // Configure Multer for Audio Uploads
 const storage = multer.diskStorage({
@@ -3045,7 +3046,15 @@ app.get('/api/pppoe/check-expiration', async (req, res) => {
     }
     
     const now = new Date();
-    const expDate = new Date(user.expiration_date);
+    // Use the same robust parsing logic as periodic check
+    const expDate = network.parsePPPoEDate(user.expiration_date);
+    
+    if (!expDate || isNaN(expDate.getTime())) {
+       console.log(`[PPPoE-Hook] Invalid expiration date for ${username}: ${user.expiration_date}`);
+       return res.json({ action: 'allow' }); // Fail open if date invalid
+    }
+    
+    console.log(`[PPPoE-Hook] Checking ${username}: Exp=${expDate.toString()} (${user.expiration_date}) vs Now=${now.toString()}`);
     
     if (expDate < now) {
       console.log(`[PPPoE-Hook] User ${username} EXPIRED - Applying restrictions`);
