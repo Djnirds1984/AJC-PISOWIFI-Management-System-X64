@@ -3033,10 +3033,14 @@ app.get('/api/pppoe/check-expiration', async (req, res) => {
       return res.json({ action: 'allow' });
     }
     
-    const user = await db.get('SELECT * FROM pppoe_users WHERE username = ?', [username]);
+    // Trim whitespace and handle case sensitivity
+    const cleanUsername = username.trim();
+    
+    // Use pppoeGet instead of get because PPPoE users are in a separate database
+    const user = await db.pppoeGet('SELECT * FROM pppoe_users WHERE username = ? COLLATE NOCASE', [cleanUsername]);
     
     if (!user) {
-      console.log(`[PPPoE-Hook] User ${username} not found in database`);
+      console.log(`[PPPoE-Hook] User ${username} (cleaned: ${cleanUsername}) not found in database`);
       return res.json({ action: 'allow' });
     }
     
