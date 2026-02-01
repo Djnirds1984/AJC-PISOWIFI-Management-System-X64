@@ -3059,25 +3059,36 @@ app.get('/api/pppoe/check-expiration', async (req, res) => {
     console.log(`[PPPoE-Hook] Checking ${username}: Exp=${expDate.toString()} (${user.expiration_date}) vs Now=${now.toString()}`);
     
     if (expDate < now) {
-      console.log(`[PPPoE-Hook] User ${username} EXPIRED - Applying restrictions`);
+      console.log(`[PPPoE-Hook] User ${username} EXPIRED - Allowing connection with restrictions`);
       
-      // Apply iptables rules immediately
+      // Apply iptables rules immediately (but allow connection)
       if (ip && ip !== 'N/A') {
-        // 1. Redirect HTTP to 8081
-        await execPromise(`iptables -t nat -I PREROUTING -s ${ip} -p tcp --dport 80 -j REDIRECT --to-port 8081`).catch(() => {});
+        // IMPORTANT: Allow the PPPoE connection to establish first
+        // Allow established and related connections (this includes PPPoE control)
+        await execPromise(`iptables -I FORWARD -s ${ip} -m state --state ESTABLISHED,RELATED -j ACCEPT`).catch(() => {});
         
-        // 2. Block Internet Access (FORWARD chain)
-        await execPromise(`iptables -I FORWARD -s ${ip} -j DROP`).catch(() => {});
-        
-        // 3. Allow DNS (Insert at top so it overrides DROP)
+        // 1. Allow DNS - Do this before any blocking
         await execPromise(`iptables -I FORWARD -s ${ip} -p udp --dport 53 -j ACCEPT`).catch(() => {});
         await execPromise(`iptables -I FORWARD -s ${ip} -p tcp --dport 53 -j ACCEPT`).catch(() => {});
         
-        // 4. Ensure access to Portal (INPUT chain) - Just in case
+        // 2. Redirect HTTP to 8081 (captive portal) - Do this early
+        await execPromise(`iptables -t nat -I PREROUTING -s ${ip} -p tcp --dport 80 -j REDIRECT --to-port 8081`).catch(() => {});
+        
+        // 3. Ensure access to Portal (INPUT chain)
         await execPromise(`iptables -I INPUT -s ${ip} -p tcp --dport 8081 -j ACCEPT`).catch(() => {});
+        
+        // 4. Block NEW internet connections (but allow existing PPPoE)
+        // Use RETURN target for more specific blocking
+        await execPromise(`iptables -I FORWARD -s ${ip} -m state --state NEW -j DROP`).catch(() => {});
+        
+        // 5. Block specific web traffic (but allow portal and DNS)
+        // Block HTTP/HTTPS to external sites (but allow our portal)
+        await execPromise(`iptables -I FORWARD -s ${ip} -p tcp --dport 80 -d ! 0.0.0.0/0 -j DROP`).catch(() => {});
+        await execPromise(`iptables -I FORWARD -s ${ip} -p tcp --dport 443 -j DROP`).catch(() => {});
       }
       
-      res.json({ action: 'restrict' });
+      // IMPORTANT: Allow connection to establish so user can see captive portal
+      res.json({ action: 'allow' });
     } else {
       console.log(`[PPPoE-Hook] User ${username} ACTIVE - Allowing access`);
       res.json({ action: 'allow' });

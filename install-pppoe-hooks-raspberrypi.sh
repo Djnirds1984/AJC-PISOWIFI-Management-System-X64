@@ -28,7 +28,28 @@ REMOTE_IP="$5"
 echo "[$(date)] PPPoE Connect: $USERNAME on $IFNAME (Client IP: $REMOTE_IP)" >> /var/log/ajc-pppoe.log
 
 # Call our API to check expiration (fail silently if server not running)
-curl -s --max-time 5 "http://localhost:80/api/pppoe/check-expiration?username=$USERNAME&ip=$REMOTE_IP" || true
+RESPONSE=$(curl -s --max-time 5 "http://localhost:80/api/pppoe/check-expiration?username=$USERNAME&ip=$REMOTE_IP" || echo '{"action":"allow"}')
+echo "[$(date)] PPPoE Hook Response: $RESPONSE" >> /var/log/ajc-pppoe.log
+
+# Extract action from JSON response (simple grep method)
+ACTION=$(echo "$RESPONSE" | grep -o '"action":"[^"]*"' | cut -d'"' -f4)
+
+# Default to allow if parsing fails
+if [ -z "$ACTION" ]; then
+    ACTION="allow"
+fi
+
+# Log the action
+echo "[$(date)] PPPoE Hook Action for $USERNAME: $ACTION" >> /var/log/ajc-pppoe.log
+
+# Return the action to pppd (exit code determines if connection continues)
+if [ "$ACTION" = "restrict" ]; then
+    echo "[$(date)] PPPoE Hook: Restricting $USERNAME" >> /var/log/ajc-pppoe.log
+    exit 1  # This will cause pppd to disconnect
+else
+    echo "[$(date)] PPPoE Hook: Allowing $USERNAME" >> /var/log/ajc-pppoe.log
+    exit 0  # This will allow the connection to continue
+fi
 EOF
 
 # Create the ip-down.local script
@@ -46,8 +67,15 @@ echo "[$(date)] PPPoE Disconnect: $USERNAME on $IFNAME (Client IP: $REMOTE_IP)" 
 
 # Remove iptables rules for this user
 if [ -n "$REMOTE_IP" ] && [ "$REMOTE_IP" != "N/A" ]; then
+    # Remove all rules that might have been added for this IP
     iptables -t nat -D PREROUTING -s "$REMOTE_IP" -p tcp --dport 80 -j REDIRECT --to-port 8081 2>/dev/null || true
-    iptables -D FORWARD -s "$REMOTE_IP" -j DROP 2>/dev/null || true
+    iptables -D FORWARD -s "$REMOTE_IP" -p tcp --dport 80 -d ! 0.0.0.0/0 -j DROP 2>/dev/null || true
+    iptables -D FORWARD -s "$REMOTE_IP" -p tcp --dport 443 -j DROP 2>/dev/null || true
+    iptables -D FORWARD -s "$REMOTE_IP" -p udp --dport 53 -j ACCEPT 2>/dev/null || true
+    iptables -D FORWARD -s "$REMOTE_IP" -p tcp --dport 53 -j ACCEPT 2>/dev/null || true
+    iptables -D FORWARD -s "$REMOTE_IP" -m state --state ESTABLISHED,RELATED -j ACCEPT 2>/dev/null || true
+    iptables -D FORWARD -s "$REMOTE_IP" -m state --state NEW -j DROP 2>/dev/null || true
+    iptables -D INPUT -s "$REMOTE_IP" -p tcp --dport 8081 -j ACCEPT 2>/dev/null || true
 fi
 EOF
 
