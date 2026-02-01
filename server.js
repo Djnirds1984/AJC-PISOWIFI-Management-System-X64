@@ -10,6 +10,7 @@ const path = require('path');
 const fs = require('fs');
 const si = require('systeminformation');
 const db = require('./lib/db');
+const { pppoeRun, pppoeAll, pppoeGet } = require('./lib/db');
 const { initGPIO, updateGPIO, registerSlotCallback, unregisterSlotCallback } = require('./lib/gpio');
 const NodeMCUListener = require('./lib/nodemcu-listener');
 const { getNodeMCULicenseManager } = require('./lib/nodemcu-license');
@@ -3137,14 +3138,14 @@ app.post('/api/network/pppoe/users', requireAdmin, async (req, res) => {
 
 // PPPoE Profiles API
 app.get('/api/network/pppoe/profiles', requireAdmin, async (req, res) => {
-  try { res.json(await db.all('SELECT * FROM pppoe_profiles ORDER BY created_at DESC')); } 
+  try { res.json(await pppoeAll('SELECT * FROM pppoe_profiles ORDER BY created_at DESC')); } 
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post('/api/network/pppoe/profiles', requireAdmin, async (req, res) => {
   const { name, rate_limit_dl, rate_limit_ul, ip_pool_start, ip_pool_end } = req.body;
   try {
-    await db.run('INSERT INTO pppoe_profiles (name, rate_limit_dl, rate_limit_ul, ip_pool_start, ip_pool_end) VALUES (?, ?, ?, ?, ?)', [name, rate_limit_dl, rate_limit_ul, ip_pool_start, ip_pool_end]);
+    await pppoeRun('INSERT INTO pppoe_profiles (name, rate_limit_dl, rate_limit_ul, ip_pool_start, ip_pool_end) VALUES (?, ?, ?, ?, ?)', [name, rate_limit_dl, rate_limit_ul, ip_pool_start, ip_pool_end]);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -3152,14 +3153,14 @@ app.post('/api/network/pppoe/profiles', requireAdmin, async (req, res) => {
 app.put('/api/network/pppoe/profiles/:id', requireAdmin, async (req, res) => {
   const { name, rate_limit_dl, rate_limit_ul, ip_pool_start, ip_pool_end } = req.body;
   try {
-    await db.run('UPDATE pppoe_profiles SET name = ?, rate_limit_dl = ?, rate_limit_ul = ?, ip_pool_start = ?, ip_pool_end = ? WHERE id = ?', [name, rate_limit_dl, rate_limit_ul, ip_pool_start, ip_pool_end, req.params.id]);
+    await pppoeRun('UPDATE pppoe_profiles SET name = ?, rate_limit_dl = ?, rate_limit_ul = ?, ip_pool_start = ?, ip_pool_end = ? WHERE id = ?', [name, rate_limit_dl, rate_limit_ul, ip_pool_start, ip_pool_end, req.params.id]);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.delete('/api/network/pppoe/profiles/:id', requireAdmin, async (req, res) => {
   try {
-    await db.run('DELETE FROM pppoe_profiles WHERE id = ?', [req.params.id]);
+    await pppoeRun('DELETE FROM pppoe_profiles WHERE id = ?', [req.params.id]);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -3180,7 +3181,7 @@ app.get('/api/network/pppoe/billing-profiles', requireAdmin, async (req, res) =>
 app.post('/api/network/pppoe/billing-profiles', requireAdmin, async (req, res) => {
   const { profile_id, name, price } = req.body;
   try {
-    await db.run('INSERT INTO pppoe_billing_profiles (profile_id, name, price) VALUES (?, ?, ?)', [profile_id, name, price]);
+    await pppoeRun('INSERT INTO pppoe_billing_profiles (profile_id, name, price) VALUES (?, ?, ?)', [profile_id, name, price]);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -3188,14 +3189,14 @@ app.post('/api/network/pppoe/billing-profiles', requireAdmin, async (req, res) =
 app.put('/api/network/pppoe/billing-profiles/:id', requireAdmin, async (req, res) => {
   const { profile_id, name, price } = req.body;
   try {
-    await db.run('UPDATE pppoe_billing_profiles SET profile_id = ?, name = ?, price = ? WHERE id = ?', [profile_id, name, price, req.params.id]);
+    await pppoeRun('UPDATE pppoe_billing_profiles SET profile_id = ?, name = ?, price = ? WHERE id = ?', [profile_id, name, price, req.params.id]);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.delete('/api/network/pppoe/billing-profiles/:id', requireAdmin, async (req, res) => {
   try {
-    await db.run('DELETE FROM pppoe_billing_profiles WHERE id = ?', [req.params.id]);
+    await pppoeRun('DELETE FROM pppoe_billing_profiles WHERE id = ?', [req.params.id]);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -3203,7 +3204,7 @@ app.delete('/api/network/pppoe/billing-profiles/:id', requireAdmin, async (req, 
 // PPPoE Logs API
 app.post('/api/network/pppoe/restart', requireAdmin, async (req, res) => {
   try {
-    const config = await db.get('SELECT * FROM pppoe_server WHERE enabled = 1');
+    const config = await pppoeGet('SELECT * FROM pppoe_server WHERE enabled = 1');
     if (!config) {
       return res.status(404).json({ error: 'No active PPPoE server config found to restart' });
     }

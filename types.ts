@@ -123,6 +123,8 @@ export interface PPPoEProfile {
   name: string;
   rate_limit_dl: number; // in Mbps
   rate_limit_ul: number; // in Mbps
+  ip_pool_start?: string;
+  ip_pool_end?: string;
   created_at?: string;
 }
 
