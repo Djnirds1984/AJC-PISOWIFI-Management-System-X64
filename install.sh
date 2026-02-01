@@ -158,6 +158,9 @@ echo -e "${GREEN}[8/8] Setting Kernel Capabilities...${NC}"
 # cap_net_admin/raw needed for raw socket access (some networking tools)
 setcap 'cap_net_bind_service,cap_net_admin,cap_net_raw+ep' $(eval readlink -f $(which node))
 
+echo -e "${GREEN}Setting Timezone to Asia/Manila...${NC}"
+timedatectl set-timezone Asia/Manila 2>/dev/null || ln -sf /usr/share/zoneinfo/Asia/Manila /etc/localtime
+
 echo -e "${BLUE}==============================================${NC}"
 echo -e "${GREEN} INSTALLATION COMPLETE! ${NC}"
 echo -e "${BLUE}==============================================${NC}"
