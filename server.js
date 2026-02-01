@@ -3061,8 +3061,18 @@ app.get('/api/pppoe/check-expiration', async (req, res) => {
       
       // Apply iptables rules immediately
       if (ip && ip !== 'N/A') {
+        // 1. Redirect HTTP to 8081
         await execPromise(`iptables -t nat -I PREROUTING -s ${ip} -p tcp --dport 80 -j REDIRECT --to-port 8081`).catch(() => {});
+        
+        // 2. Block Internet Access (FORWARD chain)
         await execPromise(`iptables -I FORWARD -s ${ip} -j DROP`).catch(() => {});
+        
+        // 3. Allow DNS (Insert at top so it overrides DROP)
+        await execPromise(`iptables -I FORWARD -s ${ip} -p udp --dport 53 -j ACCEPT`).catch(() => {});
+        await execPromise(`iptables -I FORWARD -s ${ip} -p tcp --dport 53 -j ACCEPT`).catch(() => {});
+        
+        // 4. Ensure access to Portal (INPUT chain) - Just in case
+        await execPromise(`iptables -I INPUT -s ${ip} -p tcp --dport 8081 -j ACCEPT`).catch(() => {});
       }
       
       res.json({ action: 'restrict' });
