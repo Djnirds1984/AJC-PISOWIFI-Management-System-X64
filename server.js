@@ -184,6 +184,8 @@ setInterval(cleanupExpiredCoinSlotLocks, 30_000).unref?.();
 // Periodic PPPoE expiration check (every 10 seconds for more responsive disconnects)
 setInterval(() => {
   network.checkPPPoEExpirations().catch(err => console.error('[System] PPPoE Expiration Check Error:', err));
+  // Also run cleanup of processed expired users to prevent memory growth
+  network.cleanupProcessedExpiredUsers?.();
 }, 10 * 1000).unref?.();
 
 // Configure Multer for Audio Uploads
