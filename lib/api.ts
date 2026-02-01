@@ -534,6 +534,7 @@ export const apiClient = {
     billing_profile_id?: number,
     expiration_date?: string,
     expiration_action?: string,
+    expiration_profile_id?: number,
     redirect_url?: string
   ): Promise<{ success: boolean }> {
     const res = await fetch(`${API_BASE}/network/pppoe/users`, {
@@ -545,6 +546,7 @@ export const apiClient = {
         billing_profile_id,
         expiration_date,
         expiration_action,
+        expiration_profile_id,
         redirect_url
       })
     });

@@ -29,6 +29,7 @@ const PPPoEServer: React.FC = () => {
     billing_profile_id: '',
     expiration_date: '',
     expiration_action: 'disable',
+    expiration_profile_id: '',
     redirect_url: ''
   });
   const [newProfile, setNewProfile] = useState<PPPoEProfile>({ name: '', rate_limit_dl: 5, rate_limit_ul: 5 });
@@ -145,6 +146,7 @@ const PPPoEServer: React.FC = () => {
           billing_profile_id: newPppoeUser.billing_profile_id ? parseInt(newPppoeUser.billing_profile_id) : undefined,
           expiration_date: newPppoeUser.expiration_date || undefined,
           expiration_action: newPppoeUser.expiration_action,
+          expiration_profile_id: newPppoeUser.expiration_profile_id ? parseInt(newPppoeUser.expiration_profile_id) : undefined,
           redirect_url: newPppoeUser.redirect_url || undefined
         });
         alert(`User ${newPppoeUser.username} updated!`);
@@ -155,6 +157,7 @@ const PPPoEServer: React.FC = () => {
           newPppoeUser.billing_profile_id ? parseInt(newPppoeUser.billing_profile_id) : undefined,
           newPppoeUser.expiration_date || undefined,
           newPppoeUser.expiration_action,
+          newPppoeUser.expiration_profile_id ? parseInt(newPppoeUser.expiration_profile_id) : undefined,
           newPppoeUser.redirect_url || undefined
         );
         alert(`User ${newPppoeUser.username} added!`);
@@ -642,6 +645,20 @@ const PPPoEServer: React.FC = () => {
                         >
                           <option value="disable">1. Disable Account</option>
                           <option value="redirect">2. Redirect to URL</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="text-sm font-black text-slate-400 uppercase tracking-widest mb-1 block">PPPoE Profile when Expired</label>
+                        <select 
+                          value={newPppoeUser.expiration_profile_id}
+                          onChange={e => setNewPppoeUser({...newPppoeUser, expiration_profile_id: e.target.value})}
+                          className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-sm font-bold outline-none focus:bg-white"
+                        >
+                          <option value="">Select PPPoE Profile (Optional)...</option>
+                          {pppoeProfiles.map(profile => (
+                            <option key={profile.id} value={profile.id}>{profile.name} ({profile.rate_limit_dl}↓/{profile.rate_limit_ul}↑ Mbps)</option>
+                          ))}
                         </select>
                       </div>
                       

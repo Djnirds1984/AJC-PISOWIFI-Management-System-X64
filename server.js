@@ -2992,17 +2992,15 @@ app.get('/api/network/pppoe/status', requireAdmin, async (req, res) => {
 
 app.post('/api/network/pppoe/start', requireAdmin, async (req, res) => {
   try {
-    const { interface: iface, local_ip, ip_pool_start, ip_pool_end, dns1, dns2, service_name } = req.body;
+    const { interface: iface, local_ip, dns1, dns2, service_name } = req.body;
     
-    if (!iface || !local_ip || !ip_pool_start || !ip_pool_end) {
+    if (!iface || !local_ip) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
     const result = await network.startPPPoEServer({
       interface: iface,
       local_ip,
-      ip_pool_start,
-      ip_pool_end,
       dns1,
       dns2,
       service_name
@@ -3118,7 +3116,7 @@ app.get('/api/network/pppoe/users', requireAdmin, async (req, res) => {
 
 app.post('/api/network/pppoe/users', requireAdmin, async (req, res) => {
   try {
-    const { username, password, billing_profile_id, expiration_date, expiration_action, redirect_url } = req.body;
+    const { username, password, billing_profile_id, expiration_date, expiration_action, expiration_profile_id, redirect_url } = req.body;
     
     if (!username || !password) {
       return res.status(400).json({ error: 'Username and password required' });
@@ -3130,6 +3128,7 @@ app.post('/api/network/pppoe/users', requireAdmin, async (req, res) => {
       billing_profile_id,
       expiration_date,
       expiration_action,
+      expiration_profile_id,
       redirect_url
     );
     res.json(result);
@@ -3143,17 +3142,17 @@ app.get('/api/network/pppoe/profiles', requireAdmin, async (req, res) => {
 });
 
 app.post('/api/network/pppoe/profiles', requireAdmin, async (req, res) => {
-  const { name, rate_limit_dl, rate_limit_ul } = req.body;
+  const { name, rate_limit_dl, rate_limit_ul, ip_pool_start, ip_pool_end } = req.body;
   try {
-    await db.run('INSERT INTO pppoe_profiles (name, rate_limit_dl, rate_limit_ul) VALUES (?, ?, ?)', [name, rate_limit_dl, rate_limit_ul]);
+    await db.run('INSERT INTO pppoe_profiles (name, rate_limit_dl, rate_limit_ul, ip_pool_start, ip_pool_end) VALUES (?, ?, ?, ?, ?)', [name, rate_limit_dl, rate_limit_ul, ip_pool_start, ip_pool_end]);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.put('/api/network/pppoe/profiles/:id', requireAdmin, async (req, res) => {
-  const { name, rate_limit_dl, rate_limit_ul } = req.body;
+  const { name, rate_limit_dl, rate_limit_ul, ip_pool_start, ip_pool_end } = req.body;
   try {
-    await db.run('UPDATE pppoe_profiles SET name = ?, rate_limit_dl = ?, rate_limit_ul = ? WHERE id = ?', [name, rate_limit_dl, rate_limit_ul, req.params.id]);
+    await db.run('UPDATE pppoe_profiles SET name = ?, rate_limit_dl = ?, rate_limit_ul = ?, ip_pool_start = ?, ip_pool_end = ? WHERE id = ?', [name, rate_limit_dl, rate_limit_ul, ip_pool_start, ip_pool_end, req.params.id]);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
