@@ -36,6 +36,7 @@ const PPPoEServer: React.FC = () => {
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
   const [editingProfileId, setEditingProfileId] = useState<number | null>(null);
   const [editingBillingProfileId, setEditingBillingProfileId] = useState<number | null>(null);
+  const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
 
   useEffect(() => { 
     loadData();
@@ -92,7 +93,10 @@ const PPPoEServer: React.FC = () => {
     
     try {
       setLoading(true);
-      await apiClient.startPPPoEServer(pppoeServer as PPPoEServerConfig);
+      await apiClient.startPPPoEServer({
+        ...pppoeServer as PPPoEServerConfig,
+        profile_id: selectedProfileId || undefined
+      });
       await loadData();
       alert('PPPoE Server started successfully!');
     } catch (e: any) {
@@ -353,6 +357,22 @@ const PPPoEServer: React.FC = () => {
                       {interfaces.filter(i => i.type === 'ethernet' || i.type === 'vlan' || i.type === 'bridge').map(i => (
                         <option key={i.name} value={i.name}>
                           {i.name} ({i.type}){i.name === 'br0' ? ' - Recommended' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1 block">IP Pool Profile</label>
+                    <select 
+                      value={selectedProfileId || ''}
+                      onChange={e => setSelectedProfileId(e.target.value ? parseInt(e.target.value) : null)}
+                      disabled={pppoeStatus?.running}
+                      className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-sm font-bold disabled:opacity-50 focus:ring-1 focus:ring-slate-900 outline-none"
+                    >
+                      <option value="">No Profile (Use Default Pool)</option>
+                      {pppoeProfiles.map(profile => (
+                        <option key={profile.id} value={profile.id}>
+                          {profile.name} ({profile.ip_pool_start && profile.ip_pool_end ? `${profile.ip_pool_start}-${profile.ip_pool_end}` : 'No IP Pool'})
                         </option>
                       ))}
                     </select>

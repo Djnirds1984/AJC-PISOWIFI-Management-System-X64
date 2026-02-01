@@ -2993,10 +2993,19 @@ app.get('/api/network/pppoe/status', requireAdmin, async (req, res) => {
 
 app.post('/api/network/pppoe/start', requireAdmin, async (req, res) => {
   try {
-    const { interface: iface, local_ip, dns1, dns2, service_name } = req.body;
+    const { interface: iface, local_ip, dns1, dns2, service_name, profile_id } = req.body;
     
     if (!iface || !local_ip) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    // Load profile if profile_id is provided
+    let profile = null;
+    if (profile_id) {
+      profile = await pppoeGet('SELECT * FROM pppoe_profiles WHERE id = ?', [profile_id]);
+      if (!profile) {
+        return res.status(400).json({ error: 'Profile not found' });
+      }
     }
     
     const result = await network.startPPPoEServer({
@@ -3005,7 +3014,7 @@ app.post('/api/network/pppoe/start', requireAdmin, async (req, res) => {
       dns1,
       dns2,
       service_name
-    });
+    }, profile);
     
     res.json(result);
   } catch (err) { res.status(500).json({ error: err.message }); }

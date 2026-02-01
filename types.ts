@@ -106,6 +106,7 @@ export interface PPPoEServerConfig {
   dns2?: string;
   service_name?: string;
   enabled: number;
+  profile_id?: number;
 }
 
 export interface PPPoEUser {
