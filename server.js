@@ -1,4 +1,8 @@
 require('dotenv').config();
+
+// Force Timezone to Asia/Manila for consistent date handling
+process.env.TZ = 'Asia/Manila';
+
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
